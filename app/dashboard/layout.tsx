@@ -33,7 +33,11 @@ export default async function DashboardLayout({ children }: { children: ReactNod
                 ) : null}
 
                 {user.role === 'ADMIN' && (
-                    <Link href="/dashboard/admin" className={styles.navItem}>Admin Console</Link>
+                    <>
+                        <Link href="/dashboard/admin" className={styles.navItem}>Admin Console</Link>
+                        <Link href="/dashboard/admin/users" className={styles.navItem}>Manage Users</Link>
+                        <Link href="/dashboard/admin/reports" className={styles.navItem}>Reports</Link>
+                    </>
                 )}
                 <div style={{ marginTop: 'auto' }}>
                     <SignOutButton />

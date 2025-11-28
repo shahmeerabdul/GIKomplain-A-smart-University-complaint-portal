@@ -5,7 +5,9 @@ import { z } from 'zod'
 import { Role } from '@/lib/enums'
 
 const registerSchema = z.object({
-    email: z.string().email(),
+    email: z.string().email().refine(email => email.endsWith('@giki.edu.pk'), {
+        message: 'Only @giki.edu.pk emails are allowed'
+    }),
     password: z.string().min(6),
     name: z.string().min(2),
     role: z.nativeEnum(Role).optional(),
@@ -26,6 +28,7 @@ export async function POST(request: Request) {
         }
 
         const hashedPassword = await hashPassword(password)
+        const verificationToken = crypto.randomUUID()
 
         const user = await prisma.user.create({
             data: {
@@ -34,36 +37,25 @@ export async function POST(request: Request) {
                 name,
                 role: role || Role.STUDENT,
                 departmentId,
+                verificationToken,
+                emailVerified: null // Explicitly null
             },
         })
 
-        const token = signToken({
-            userId: user.id,
-            email: user.email,
-            role: user.role,
-            departmentId: user.departmentId,
-        })
+        // MOCK EMAIL SENDING
+        const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/auth/verify-email?token=${verificationToken}`
+        console.log('----------------------------------------------------------------')
+        console.log('📧 MOCK EMAIL: Verify your account')
+        console.log(`To: ${email}`)
+        console.log(`Link: ${verificationUrl}`)
+        console.log('----------------------------------------------------------------')
 
-        const response = NextResponse.json({
-            user: {
-                id: user.id,
-                email: user.email,
-                name: user.name,
-                role: user.role,
-                departmentId: user.departmentId,
-            },
+        // Do NOT log the user in. Return success message.
+        return NextResponse.json({
+            message: 'Account created successfully. Please check your email to verify your account.'
         })
-
-        response.cookies.set('token', token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            maxAge: 86400,
-            path: '/',
-        })
-
-        return response
     } catch (error) {
+        console.error('Registration Error:', error)
         if (error instanceof z.ZodError) {
             return NextResponse.json({ error: (error as any).errors }, { status: 400 })
         }

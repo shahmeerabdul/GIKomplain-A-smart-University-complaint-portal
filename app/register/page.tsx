@@ -11,11 +11,13 @@ export default function RegisterPage() {
     const [role, setRole] = useState('STUDENT')
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
+    const [success, setSuccess] = useState('')
     const router = useRouter()
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setError('')
+        setSuccess('')
         setLoading(true)
 
         try {
@@ -25,16 +27,25 @@ export default function RegisterPage() {
                 body: JSON.stringify({ name, email, password, role }),
             })
 
+            const data = await res.json()
+
             if (res.ok) {
-                router.push('/dashboard')
-                router.refresh()
+                setSuccess(data.message)
+                // Clear form
+                setName('')
+                setEmail('')
+                setPassword('')
             } else {
-                const data = await res.json()
-                setError(data.error || 'Registration failed')
-                setLoading(false)
+                if (Array.isArray(data.error)) {
+                    // Handle Zod error array
+                    setError(data.error.map((e: any) => e.message).join(', '))
+                } else {
+                    setError(data.error || 'Registration failed')
+                }
             }
         } catch (err) {
             setError('An error occurred. Please try again.')
+        } finally {
             setLoading(false)
         }
     }
@@ -64,6 +75,20 @@ export default function RegisterPage() {
                         border: '1px solid rgba(239, 68, 68, 0.2)'
                     }}>
                         {error}
+                    </div>
+                )}
+
+                {success && (
+                    <div style={{
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        color: '#16a34a',
+                        padding: '0.75rem',
+                        borderRadius: 'var(--radius)',
+                        marginBottom: '1.5rem',
+                        fontSize: '0.875rem',
+                        border: '1px solid rgba(34, 197, 94, 0.2)'
+                    }}>
+                        {success}
                     </div>
                 )}
 

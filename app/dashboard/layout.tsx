@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { getUserFromToken } from '@/lib/auth'
 import styles from './dashboard.module.css'
 import DashboardLayoutClient from './layout-client'
+import SignOutButton from './sign-out-button'
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
     const cookieStore = await cookies()
@@ -34,6 +35,9 @@ export default async function DashboardLayout({ children }: { children: ReactNod
                 {user.role === 'ADMIN' && (
                     <Link href="/dashboard/admin" className={styles.navItem}>Admin Console</Link>
                 )}
+                <div style={{ marginTop: 'auto' }}>
+                    <SignOutButton />
+                </div>
             </nav>
             <div className={styles.userProfile}>
                 <div className={styles.userName}>{user.name}</div>

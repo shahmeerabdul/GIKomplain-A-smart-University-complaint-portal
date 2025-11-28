@@ -2,8 +2,9 @@ import { cookies } from 'next/headers'
 import { getUserFromToken } from '@/lib/auth'
 import { prisma } from '@/lib/db'
 import Link from 'next/link'
+import ComplaintAssignment from './complaints/assignment-modal'
 
-export default async function AdminDashboard({ searchParams }: { searchParams: { status?: string, category?: string } }) {
+export default async function AdminDashboard({ searchParams }: { searchParams: Promise<{ status?: string, category?: string }> }) {
     const cookieStore = await cookies()
     const token = cookieStore.get('token')?.value
     const user = token ? await getUserFromToken(token) : null
@@ -12,7 +13,7 @@ export default async function AdminDashboard({ searchParams }: { searchParams: {
         return <div>Unauthorized</div>
     }
 
-    const { status, category } = searchParams
+    const { status, category } = await searchParams
     const whereClause: any = {}
     if (status) whereClause.status = status
     if (category) whereClause.category = category
@@ -20,7 +21,16 @@ export default async function AdminDashboard({ searchParams }: { searchParams: {
     const complaints = await prisma.complaint.findMany({
         where: whereClause,
         orderBy: { createdAt: 'desc' },
-        include: { complainant: true, assignedDept: true }
+        include: { complainant: true, assignedDept: true, assignedOfficer: true }
+    })
+
+    const departments = await prisma.department.findMany()
+    const officers = await prisma.user.findMany({
+        where: {
+            role: {
+                in: ['FACULTY', 'STAFF', 'DEPT_OFFICER']
+            }
+        }
     })
 
     // Stats for quick view
@@ -83,16 +93,25 @@ export default async function AdminDashboard({ searchParams }: { searchParams: {
                                     From: {complaint.complainant.name} • Dept: {complaint.assignedDept?.name || 'Unassigned'}
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{
-                                        padding: '0.25rem 0.75rem',
-                                        borderRadius: '9999px',
-                                        fontSize: '0.75rem',
-                                        fontWeight: '600',
-                                        backgroundColor: getStatusColor(complaint.status),
-                                        color: 'white'
-                                    }}>
-                                        {complaint.status}
-                                    </span>
+                                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                        <span style={{
+                                            padding: '0.25rem 0.75rem',
+                                            borderRadius: '9999px',
+                                            fontSize: '0.75rem',
+                                            fontWeight: '600',
+                                            backgroundColor: getStatusColor(complaint.status),
+                                            color: 'white'
+                                        }}>
+                                            {complaint.status}
+                                        </span>
+                                        <ComplaintAssignment
+                                            complaintId={complaint.id}
+                                            departments={departments}
+                                            officers={officers}
+                                            currentDeptId={complaint.assignedDeptId}
+                                            currentOfficerId={complaint.assignedOfficerId}
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </Link>
